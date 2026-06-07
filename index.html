@@ -1,873 +1,534 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧠 Navegador IA - NVIDIA NIM</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --nvidia: #76b900;
-            --nvidia-dark: #5a8f00;
-            --bg-dark: #0f0f1a;
-            --bg-panel: #1a1a2e;
-            --bg-chat: #16213e;
-            --text: #e0e0e0;
-            --border: #0f3460;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
-        /* === PAINEL NAVEGADOR === */
-        .browser-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-
-        .toolbar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 15px;
-            background: var(--bg-panel);
-            border-bottom: 2px solid var(--nvidia);
-        }
-
-        .toolbar button {
-            background: var(--bg-chat);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 8px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.2s;
-        }
-
-        .toolbar button:hover {
-            background: var(--nvidia);
-            color: #000;
-            font-weight: bold;
-        }
-
-        .url-bar {
-            flex: 1;
-            display: flex;
-            gap: 8px;
-        }
-
-        .url-bar input {
-            flex: 1;
-            background: var(--bg-chat);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            outline: none;
-        }
-
-        .url-bar input:focus {
-            border-color: var(--nvidia);
-            box-shadow: 0 0 0 2px rgba(118,185,0,0.2);
-        }
-
-        .url-bar button.go {
-            background: var(--nvidia);
-            color: #000;
-            font-weight: bold;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .url-bar button.go:hover {
-            background: var(--nvidia-dark);
-        }
-
-        .progress-bar {
-            height: 3px;
-            background: var(--bg-panel);
-            display: none;
-        }
-
-        .progress-bar.active {
-            display: block;
-        }
-
-        .progress-bar .fill {
-            height: 100%;
-            width: 0%;
-            background: var(--nvidia);
-            transition: width 0.3s;
-        }
-
-        .iframe-container {
-            flex: 1;
-            position: relative;
-            background: #fff;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        .status-bar {
-            padding: 6px 15px;
-            background: var(--bg-panel);
-            border-top: 1px solid var(--border);
-            font-size: 12px;
-            color: #888;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        /* === PAINEL IA === */
-        .ai-panel {
-            width: 420px;
-            min-width: 320px;
-            max-width: 500px;
-            background: var(--bg-panel);
-            border-left: 2px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .ai-header {
-            padding: 15px;
-            text-align: center;
-            border-bottom: 2px solid var(--nvidia);
-        }
-
-        .ai-header h2 {
-            color: var(--nvidia);
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-
-        .ai-header p {
-            font-size: 12px;
-            color: #888;
-        }
-
-        /* Configuração */
-        .config-section {
-            padding: 12px 15px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .config-section label {
-            display: block;
-            font-size: 12px;
-            color: var(--nvidia);
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .config-section input,
-        .config-section select {
-            width: 100%;
-            background: var(--bg-chat);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 8px 10px;
-            border-radius: 5px;
-            font-size: 13px;
-            margin-bottom: 8px;
-        }
-
-        .config-section button.save {
-            width: 100%;
-            background: var(--nvidia);
-            color: #000;
-            border: none;
-            padding: 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .config-section button.save:hover {
-            background: var(--nvidia-dark);
-        }
-
-        /* Comandos rápidos */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            padding: 10px 15px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .quick-actions button {
-            background: var(--bg-chat);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-
-        .quick-actions button:hover {
-            background: var(--nvidia);
-            color: #000;
-            font-weight: bold;
-        }
-
-        /* Chat */
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .message {
-            max-width: 95%;
-            padding: 10px 14px;
-            border-radius: 10px;
-            font-size: 13px;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        .message.user {
-            align-self: flex-end;
-            background: var(--nvidia);
-            color: #000;
-            font-weight: 500;
-        }
-
-        .message.ai {
-            align-self: flex-start;
-            background: var(--bg-chat);
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-
-        .message.ai pre {
-            background: #0a0a1a;
-            padding: 8px;
-            border-radius: 5px;
-            overflow-x: auto;
-            font-size: 12px;
-            margin-top: 8px;
-        }
-
-        .message.ai code {
-            background: #0a0a1a;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-
-        .message .label {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 4px;
-            font-weight: bold;
-        }
-
-        .typing {
-            align-self: flex-start;
-            color: #888;
-            font-style: italic;
-            font-size: 13px;
-        }
-
-        .chat-input-area {
-            padding: 12px 15px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .chat-input-area input {
-            background: var(--bg-chat);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .chat-input-area input:focus {
-            border-color: var(--nvidia);
-        }
-
-        .chat-input-area button {
-            background: var(--nvidia);
-            color: #000;
-            border: none;
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .chat-input-area button:hover {
-            background: var(--nvidia-dark);
-        }
-
-        .chat-input-area button:disabled {
-            background: #444;
-            color: #888;
-            cursor: not-allowed;
-        }
-
-        /* Info página */
-        .page-info {
-            padding: 10px 15px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
-            max-height: 120px;
-            overflow-y: auto;
-        }
-
-        .page-info h4 {
-            color: var(--nvidia);
-            margin-bottom: 6px;
-            font-size: 13px;
-        }
-
-        .page-info pre {
-            background: var(--bg-chat);
-            padding: 8px;
-            border-radius: 5px;
-            font-size: 11px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-        }
-
-        .btn-extract {
-            margin: 0 15px 10px;
-            background: #e94560;
-            color: #fff;
-            border: none;
-            padding: 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .btn-extract:hover {
-            background: #c73e54;
-        }
-
-        /* Toggle panel */
-        .toggle-panel {
-            display: none;
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--nvidia);
-            color: #000;
-            border: none;
-            padding: 15px 8px;
-            border-radius: 8px 0 0 8px;
-            cursor: pointer;
-            font-weight: bold;
-            z-index: 100;
-        }
-
-        @media (max-width: 900px) {
-            .ai-panel { width: 100%; position: absolute; right: -100%; z-index: 50; }
-            .ai-panel.open { right: 0; }
-            .toggle-panel { display: block; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Navegador IA - NVIDIA NIM</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--nvidia:#76b900;--nvidia-dark:#5a8f00;--bg-dark:#0f0f1a;--bg-panel:#1a1a2e;--bg-chat:#16213e;--text:#e0e0e0;--border:#0f3460}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg-dark);color:var(--text);height:100vh;overflow:hidden}
+.container{display:flex;height:100vh}
+.browser-panel{flex:1;display:flex;flex-direction:column;min-width:0}
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 15px;background:var(--bg-panel);border-bottom:2px solid var(--nvidia)}
+.toolbar button{background:var(--bg-chat);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:6px;cursor:pointer;font-size:16px;transition:all .2s}
+.toolbar button:hover{background:var(--nvidia);color:#000;font-weight:bold}
+.url-bar{flex:1;display:flex;gap:8px}
+.url-bar input{flex:1;background:var(--bg-chat);border:1px solid var(--border);color:var(--text);padding:10px 15px;border-radius:6px;font-size:14px;outline:none}
+.url-bar input:focus{border-color:var(--nvidia);box-shadow:0 0 0 2px rgba(118,185,0,0.2)}
+.url-bar button.go{background:var(--nvidia);color:#000;font-weight:bold;border:none;padding:10px 20px;border-radius:6px;cursor:pointer}
+.url-bar button.go:hover{background:var(--nvidia-dark)}
+.progress-bar{height:3px;background:var(--bg-panel);display:none}
+.progress-bar.active{display:block}
+.progress-bar .fill{height:100%;width:0%;background:var(--nvidia);transition:width .3s}
+.iframe-container{flex:1;position:relative;background:#fff}
+iframe{width:100%;height:100%;border:none}
+.status-bar{padding:6px 15px;background:var(--bg-panel);border-top:1px solid var(--border);font-size:12px;color:#888;display:flex;justify-content:space-between}
+.ai-panel{width:420px;min-width:320px;max-width:500px;background:var(--bg-panel);border-left:2px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.ai-header{padding:15px;text-align:center;border-bottom:2px solid var(--nvidia)}
+.ai-header h2{color:var(--nvidia);font-size:18px;margin-bottom:5px}
+.ai-header p{font-size:12px;color:#888}
+.config-section{padding:12px 15px;border-bottom:1px solid var(--border)}
+.config-section label{display:block;font-size:12px;color:var(--nvidia);margin-bottom:5px;font-weight:bold}
+.config-section input,.config-section select{width:100%;background:var(--bg-chat);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:5px;font-size:13px;margin-bottom:8px}
+.config-section button.save{width:100%;background:var(--nvidia);color:#000;border:none;padding:8px;border-radius:5px;cursor:pointer;font-weight:bold}
+.config-section button.save:hover{background:var(--nvidia-dark)}
+.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 15px;border-bottom:1px solid var(--border)}
+.quick-actions button{background:var(--bg-chat);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:5px;cursor:pointer;font-size:12px;transition:all .2s}
+.quick-actions button:hover{background:var(--nvidia);color:#000;font-weight:bold}
+.chat-container{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-messages{flex:1;overflow-y:auto;padding:15px;display:flex;flex-direction:column;gap:12px}
+.message{max-width:95%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;word-wrap:break-word}
+.message.user{align-self:flex-end;background:var(--nvidia);color:#000;font-weight:500}
+.message.ai{align-self:flex-start;background:var(--bg-chat);border:1px solid var(--border);color:var(--text)}
+.message.ai pre{background:#0a0a1a;padding:8px;border-radius:5px;overflow-x:auto;font-size:12px;margin-top:8px}
+.message.ai code{background:#0a0a1a;padding:2px 6px;border-radius:3px;font-family:monospace}
+.message .label{font-size:11px;opacity:.7;margin-bottom:4px;font-weight:bold}
+.typing{align-self:flex-start;color:#888;font-style:italic;font-size:13px}
+.chat-input-area{padding:12px 15px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.chat-input-area input{background:var(--bg-chat);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-size:13px;outline:none}
+.chat-input-area input:focus{border-color:var(--nvidia)}
+.chat-input-area button{background:var(--nvidia);color:#000;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:bold}
+.chat-input-area button:hover{background:var(--nvidia-dark)}
+.chat-input-area button:disabled{background:#444;color:#888;cursor:not-allowed}
+.page-info{padding:10px 15px;border-top:1px solid var(--border);font-size:12px;max-height:120px;overflow-y:auto}
+.page-info h4{color:var(--nvidia);margin-bottom:6px;font-size:13px}
+.page-info pre{background:var(--bg-chat);padding:8px;border-radius:5px;font-size:11px;overflow-x:auto;white-space:pre-wrap}
+.btn-extract{margin:0 15px 10px;background:#e94560;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;font-size:12px}
+.btn-extract:hover{background:#c73e54}
+.error-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bg-panel);display:none;flex-direction:column;align-items:center;justify-content:center;color:#888;text-align:center;padding:20px;z-index:10}
+.error-overlay h3{color:#e94560;margin-bottom:10px}
+@media(max-width:900px){.ai-panel{width:100%;position:absolute;right:-100%;z-index:50}.ai-panel.open{right:0}}
+</style>
+<base target="_blank">
 </head>
 <body>
-    <div class="container">
-        <!-- PAINEL NAVEGADOR -->
-        <div class="browser-panel">
-            <div class="toolbar">
-                <button onclick="goBack()" title="Voltar">◀</button>
-                <button onclick="goForward()" title="Avançar">▶</button>
-                <button onclick="reload()" title="Recarregar">↻</button>
-                <div class="url-bar">
-                    <input type="text" id="urlInput" placeholder="Digite uma URL ou comando de IA..." 
-                           value="https://www.google.com" onkeydown="if(event.key==='Enter')navigate()">
-                    <button class="go" onclick="navigate()">Ir</button>
-                </div>
-            </div>
-            <div class="progress-bar" id="progressBar">
-                <div class="fill" id="progressFill"></div>
-            </div>
-            <div class="iframe-container">
-                <iframe id="browserFrame" src="https://www.google.com" 
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
-                        onload="onFrameLoad()" onerror="onFrameError()"></iframe>
-            </div>
-            <div class="status-bar">
-                <span id="statusText">Pronto</span>
-                <span id="pageInfo">Nenhuma página carregada</span>
-            </div>
-        </div>
-
-        <!-- PAINEL IA -->
-        <div class="ai-panel" id="aiPanel">
-            <div class="ai-header">
-                <h2>🤖 Assistente NVIDIA NIM</h2>
-                <p>IA integrada ao navegador</p>
-            </div>
-
-            <!-- Config -->
-            <div class="config-section">
-                <label>🔑 API Key NVIDIA (nvapi-...)</label>
-                <input type="password" id="apiKey" placeholder="nvapi-xxxxxxxx...">
-
-                <label>🧠 Modelo</label>
-                <select id="modelSelect">
-                    <option value="meta/llama-3.3-70b-instruct">Llama 3.3 70B (recomendado)</option>
-                    <option value="nvidia/nemotron-3-super-120b-a12b">Nemotron 3 Super 120B</option>
-                    <option value="deepseek-ai/deepseek-r1">DeepSeek R1</option>
-                    <option value="mistralai/mistral-small-4-119b">Mistral Small 4</option>
-                    <option value="nvidia/nemotron-4-340b-instruct">Nemotron 4 340B</option>
-                    <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B (rápido)</option>
-                </select>
-
-                <button class="save" onclick="saveConfig()">💾 Salvar Configuração</button>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="quick-actions">
-                <button onclick="quickCommand('Resuma o conteúdo desta página de forma clara e objetiva')">📄 Resumir</button>
-                <button onclick="quickCommand('Liste e categorize todos os links principais desta página')">🔗 Links</button>
-                <button onclick="quickCommand('Faça uma análise completa do conteúdo, estrutura e propósito desta página')">📊 Análise</button>
-                <button onclick="quickCommand('Quais ações eu posso realizar nesta página? Liste botões, formulários e campos interativos')">🎮 Ações</button>
-            </div>
-
-            <!-- Chat -->
-            <div class="chat-container">
-                <div class="chat-messages" id="chatMessages">
-                    <div class="message ai">
-                        <div class="label">🤖 NVIDIA NIM</div>
-                        Bem-vindo! Configure sua API Key da NVIDIA no painel acima e comece a navegar com IA. 
-                        <br><br>
-                        <strong>Comandos que entendo:</strong>
-                        <ul style="margin-left:15px;margin-top:5px">
-                            <li>"Vá para [site.com]"</li>
-                            <li>"Resuma esta página"</li>
-                            <li>"Liste os links"</li>
-                            <li>"Análise completa"</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="chat-input-area">
-                    <input type="text" id="chatInput" 
-                           placeholder="Ex: Vá para google.com, Resuma esta página..."
-                           onkeydown="if(event.key==='Enter')sendMessage()">
-                    <button id="sendBtn" onclick="sendMessage()">▶ Enviar para NVIDIA NIM</button>
-                </div>
-            </div>
-
-            <button class="btn-extract" onclick="extractPageData()">🔄 Extrair Dados da Página</button>
-
-            <div class="page-info" id="pageInfoPanel">
-                <h4>📊 Dados da Página</h4>
-                <pre id="pageData">Clique em "Extrair Dados" para analisar...</pre>
-            </div>
-        </div>
-    </div>
-
-    <button class="toggle-panel" onclick="togglePanel()">◀<br>I<br>A</button>
-
-    <script>
-        // === CONFIGURAÇÃO ===
-        const CONFIG = {
-            apiKey: localStorage.getItem('nvidia_api_key') || '',
-            model: localStorage.getItem('nvidia_model') || 'meta/llama-3.3-70b-instruct',
-            baseUrl: 'https://integrate.api.nvidia.com/v1'
-        };
-
-        // Carrega config salva
-        document.getElementById('apiKey').value = CONFIG.apiKey;
-        document.getElementById('modelSelect').value = CONFIG.model;
-
-        function saveConfig() {
-            CONFIG.apiKey = document.getElementById('apiKey').value.trim();
-            CONFIG.model = document.getElementById('modelSelect').value;
-            localStorage.setItem('nvidia_api_key', CONFIG.apiKey);
-            localStorage.setItem('nvidia_model', CONFIG.model);
-            addMessage('ai', '✅ Configuração salva! API Key e modelo armazenados localmente no seu navegador.');
-        }
-
-        // === NAVEGAÇÃO ===
-        const frame = document.getElementById('browserFrame');
-        const urlInput = document.getElementById('urlInput');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        const statusText = document.getElementById('statusText');
-
-        let pageContext = {
-            title: '',
-            url: '',
-            text: '',
-            links: [],
-            images: [],
-            buttons: []
-        };
-
-        function navigate() {
-            let url = urlInput.value.trim();
-            if (!url) return;
-
-            // Se for comando de IA
-            if (url.startsWith('/') || /clique|resuma|vá para|pesquise|analise|liste|navegue/i.test(url)) {
-                document.getElementById('chatInput').value = url.replace(/^\//, '');
-                sendMessage();
-                return;
-            }
-
-            // Normaliza URL
-            if (!url.match(/^https?:\/\//)) {
-                if (url.includes('.') && !url.includes(' ')) {
-                    url = 'https://' + url;
-                } else {
-                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
-                }
-            }
-
-            progressBar.classList.add('active');
-            progressFill.style.width = '30%';
-            statusText.textContent = 'Carregando...';
-
-            frame.src = url;
-            urlInput.value = url;
-        }
-
-        function goBack() { frame.contentWindow.history.back(); }
-        function goForward() { frame.contentWindow.history.forward(); }
-        function reload() { frame.src = frame.src; }
-
-        function onFrameLoad() {
-            progressFill.style.width = '100%';
-            setTimeout(() => {
-                progressBar.classList.remove('active');
-                progressFill.style.width = '0%';
-            }, 500);
-
-            try {
-                pageContext.title = frame.contentDocument?.title || 'Sem título';
-                pageContext.url = frame.contentWindow?.location?.href || frame.src;
-                statusText.textContent = '✅ Página carregada';
-                document.getElementById('pageInfo').textContent = pageContext.title + ' | ' + pageContext.url;
-            } catch(e) {
-                pageContext.title = 'Página externa (CORS)';
-                pageContext.url = frame.src;
-                statusText.textContent = '⚠️ Limitado por CORS';
-            }
-
-            // Tenta extrair dados automaticamente
-            extractPageData();
-        }
-
-        function onFrameError() {
-            statusText.textContent = '❌ Erro ao carregar';
-            progressBar.classList.remove('active');
-        }
-
-        // === EXTRAÇÃO DE DADOS ===
-        async function extractPageData() {
-            const url = frame.src;
-            statusText.textContent = '🔍 Extraindo dados...';
-
-            try {
-                // Tenta extrair do iframe (mesma origem)
-                const doc = frame.contentDocument;
-                if (doc) {
-                    const text = doc.body?.innerText?.substring(0, 3000) || '';
-                    const links = Array.from(doc.querySelectorAll('a')).slice(0, 50).map(a => ({
-                        text: (a.innerText || a.textContent || '').substring(0, 100),
-                        href: a.href || ''
-                    }));
-                    const images = Array.from(doc.querySelectorAll('img')).slice(0, 30).map(img => ({
-                        src: img.src || '',
-                        alt: img.alt || ''
-                    }));
-                    const buttons = Array.from(doc.querySelectorAll('button, input[type="submit"]')).slice(0, 20).map(b => ({
-                        text: (b.innerText || b.value || '').substring(0, 100)
-                    }));
-
-                    pageContext = { title: doc.title || 'Sem título', url, text, links, images, buttons };
-                } else {
-                    // Fallback: fetch via proxy CORS
-                    pageContext = await fetchViaProxy(url);
-                }
-
-                updatePageInfo();
-                statusText.textContent = '✅ Dados extraídos';
-                addMessage('ai', `📊 Dados da página atualizados: ${pageContext.links.length} links, ${pageContext.images.length} imagens, ${pageContext.buttons.length} botões.`);
-            } catch(e) {
-                statusText.textContent = '⚠️ Extração limitada (CORS)';
-                pageContext = { title: 'Acesso limitado', url, text: '', links: [], images: [], buttons: [] };
-                updatePageInfo();
-            }
-        }
-
-        async function fetchViaProxy(url) {
-            // Usa proxy CORS público para sites externos
-            const proxies = [
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                `https://corsproxy.io/?${encodeURIComponent(url)}`
-            ];
-
-            for (const proxy of proxies) {
-                try {
-                    const res = await fetch(proxy, { timeout: 10000 });
-                    if (!res.ok) continue;
-                    const html = await res.text();
-
-                    // Parse básico do HTML
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
-                    const text = (doc.body?.innerText || '').substring(0, 3000);
-                    const links = Array.from(doc.querySelectorAll('a')).slice(0, 50).map(a => ({
-                        text: (a.innerText || a.textContent || '').substring(0, 100),
-                        href: a.href || ''
-                    }));
-                    const images = Array.from(doc.querySelectorAll('img')).slice(0, 30).map(img => ({
-                        src: img.src || '',
-                        alt: img.alt || ''
-                    }));
-                    const buttons = Array.from(doc.querySelectorAll('button, input[type="submit"]')).slice(0, 20).map(b => ({
-                        text: (b.innerText || b.value || '').substring(0, 100)
-                    }));
-
-                    return {
-                        title: doc.title || 'Sem título',
-                        url,
-                        text,
-                        links,
-                        images,
-                        buttons
-                    };
-                } catch(e) { continue; }
-            }
-            throw new Error('Nenhum proxy disponível');
-        }
-
-        function updatePageInfo() {
-            const info = `📄 Título: ${pageContext.title}
-🔗 URL: ${pageContext.url}
-📝 Texto: ${pageContext.text.length} caracteres
-🔗 Links: ${pageContext.links.length}
-🖼️ Imagens: ${pageContext.images.length}
-🔘 Botões: ${pageContext.buttons.length}`;
-            document.getElementById('pageData').textContent = info;
-        }
-
-        // === CHAT IA ===
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-
-        function addMessage(role, text) {
-            const div = document.createElement('div');
-            div.className = `message ${role}`;
-
-            const label = role === 'user' ? '👤 Você' : '🤖 NVIDIA NIM';
-            // Converte markdown básico
-            let formatted = text
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                .replace(/`(.+?)`/g, '<code>$1</code>')
-                .replace(/
-/g, '<br>');
-
-            div.innerHTML = `<div class="label">${label}</div>${formatted}`;
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function quickCommand(text) {
-            chatInput.value = text;
-            sendMessage();
-        }
-
-        async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text) return;
-
-            if (!CONFIG.apiKey || !CONFIG.apiKey.startsWith('nvapi-')) {
-                addMessage('ai', '❌ Configure sua API Key da NVIDIA primeiro! Acesse https://build.nvidia.com para gerar uma chave gratuita (começa com nvapi-).');
-                return;
-            }
-
-            chatInput.value = '';
-            addMessage('user', text);
-
-            // Indicador de digitação
-            const typing = document.createElement('div');
-            typing.className = 'typing';
-            typing.id = 'typing';
-            typing.textContent = '🧠 NVIDIA NIM está pensando...';
-            chatMessages.appendChild(typing);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            sendBtn.disabled = true;
-            sendBtn.textContent = '⏳ Processando...';
-            statusText.textContent = '🧠 Enviando para NVIDIA NIM...';
-
-            try {
-                const context = prepareContext();
-                const response = await callNVIDIA(text, context);
-
-                document.getElementById('typing')?.remove();
-                addMessage('ai', response);
-
-                // Processa ações embutidas
-                processActions(response);
-
-                statusText.textContent = '✅ Resposta recebida';
-            } catch(e) {
-                document.getElementById('typing')?.remove();
-                addMessage('ai', `❌ Erro: ${e.message}`);
-                statusText.textContent = '❌ Erro na API';
-            }
-
-            sendBtn.disabled = false;
-            sendBtn.textContent = '▶ Enviar para NVIDIA NIM';
-        }
-
-        function prepareContext() {
-            let ctx = `Título: ${pageContext.title}
-URL: ${pageContext.url}
-
-`;
-            ctx += `Texto (primeiros 2000 chars):
-${pageContext.text.substring(0, 2000)}
-
-`;
-
-            if (pageContext.links.length) {
-                ctx += `Links principais (${pageContext.links.length} total):
-`;
-                pageContext.links.slice(0, 15).forEach((l, i) => {
-                    ctx += `${i+1}. ${l.text.substring(0, 80)}: ${l.href.substring(0, 100)}
-`;
-                });
-                ctx += '
-';
-            }
-
-            if (pageContext.buttons.length) {
-                ctx += `Botões: ${pageContext.buttons.map(b => b.text).join(', ')}
-
-`;
-            }
-
-            return ctx;
-        }
-
-        async function callNVIDIA(userMessage, context) {
-            const systemPrompt = `Você é um assistente de navegação web inteligente integrado a um navegador.
-Você recebe comandos do usuário em português e ajuda a navegar, analisar e interagir com páginas web.
-
-Regras de resposta:
-1. Se o usuário pedir para ir a um site, responda com "NAVEGAR: [URL]" no início
-2. Se pedir para voltar, responda com "VOLTAR"
-3. Se pedir para avançar, responda com "AVANCAR"
-4. Para análise/resumo, forneça resposta detalhada baseada no contexto
-5. Seja conciso mas completo
-6. Responda em português
-
-Contexto atual da página:
-${context}`;
-
-            const res = await fetch(`${CONFIG.baseUrl}/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${CONFIG.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: CONFIG.model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ],
-                    temperature: 0.3,
-                    max_tokens: 2048
-                })
-            });
-
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.error?.message || `HTTP ${res.status}`);
-            }
-
-            const data = await res.json();
-            return data.choices[0].message.content;
-        }
-
-        function processActions(response) {
-            // Navegar
-            const navMatch = response.match(/NAVEGAR:\s*(.+)/i);
-            if (navMatch) {
-                let url = navMatch[1].trim();
-                if (!url.match(/^https?:\/\//)) url = 'https://' + url;
-                frame.src = url;
-                urlInput.value = url;
-                addMessage('ai', `⚙️ Executando: Navegando para ${url}`);
-            }
-
-            // Voltar
-            if (/VOLTAR/i.test(response)) {
-                goBack();
-                addMessage('ai', '⚙️ Executando: Voltando...');
-            }
-
-            // Avançar
-            if (/AVANCAR/i.test(response)) {
-                goForward();
-                addMessage('ai', '⚙️ Executando: Avançando...');
-            }
-        }
-
-        // === MOBILE TOGGLE ===
-        function togglePanel() {
-            document.getElementById('aiPanel').classList.toggle('open');
-        }
-
-        // Inicialização
-        updatePageInfo();
-    </script>
+<div class="container">
+<div class="browser-panel">
+<div class="toolbar">
+<button onclick="app.goBack()" title="Voltar">&#9664;</button>
+<button onclick="app.goForward()" title="Avancar">&#9654;</button>
+<button onclick="app.reload()" title="Recarregar">&#8635;</button>
+<div class="url-bar">
+<input type="text" id="urlInput" placeholder="Digite uma URL..." value="https://example.com">
+<button class="go" onclick="app.navigate()">Ir</button>
+</div>
+</div>
+<div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+<div class="iframe-container" id="iframeContainer">
+<iframe id="browserFrame" src="about:blank"></iframe>
+<div class="error-overlay" id="errorOverlay">
+<h3>&#9888; Site bloqueado</h3>
+<p>Este site nao permite ser aberto em um iframe.</p>
+<p>Tente: example.com, wikipedia.org, httpbin.org</p>
+</div>
+</div>
+<div class="status-bar">
+<span id="statusText">Pronto</span>
+<span id="pageInfo">Nenhuma pagina carregada</span>
+</div>
+</div>
+<div class="ai-panel" id="aiPanel">
+<div class="ai-header">
+<h2>&#129302; Assistente NVIDIA NIM</h2>
+<p>IA integrada ao navegador</p>
+</div>
+<div class="config-section">
+<label>&#128273; API Key NVIDIA (nvapi-...)</label>
+<input type="password" id="apiKey" placeholder="nvapi-xxxxxxxx...">
+<label>&#129504; Modelo</label>
+<select id="modelSelect">
+<option value="meta/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+<option value="nvidia/nemotron-3-super-120b-a12b">Nemotron 3 Super 120B</option>
+<option value="deepseek-ai/deepseek-r1">DeepSeek R1</option>
+<option value="mistralai/mistral-small-4-119b">Mistral Small 4</option>
+<option value="nvidia/nemotron-4-340b-instruct">Nemotron 4 340B</option>
+<option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B</option>
+</select>
+<button class="save" onclick="app.saveConfig()">&#128190; Salvar Configuracao</button>
+</div>
+<div class="quick-actions">
+<button onclick="app.quickCommand('Resuma o conteudo desta pagina de forma clara e objetiva')">&#128196; Resumir</button>
+<button onclick="app.quickCommand('Liste e categorize todos os links principais desta pagina')">&#128279; Links</button>
+<button onclick="app.quickCommand('Faca uma analise completa do conteudo, estrutura e proposito desta pagina')">&#128202; Analise</button>
+<button onclick="app.quickCommand('Quais acoes eu posso realizar nesta pagina? Liste botoes, formularios e campos interativos')">&#127918; Acoes</button>
+</div>
+<div class="chat-container">
+<div class="chat-messages" id="chatMessages">
+<div class="message ai">
+<div class="label">&#129302; NVIDIA NIM</div>
+Bem-vindo! Configure sua API Key da NVIDIA no painel acima e comece a navegar com IA.
+<br><br>
+<strong>Comandos que entendo:</strong>
+<ul style="margin-left:15px;margin-top:5px">
+<li>"Va para example.com"</li>
+<li>"Resuma esta pagina"</li>
+<li>"Liste os links"</li>
+<li>"Analise completa"</li>
+</ul>
+</div>
+</div>
+<div class="chat-input-area">
+<input type="text" id="chatInput" placeholder="Ex: Va para example.com, Resuma esta pagina...">
+<button id="sendBtn" onclick="app.sendMessage()">&#9654; Enviar para NVIDIA NIM</button>
+</div>
+</div>
+<button class="btn-extract" onclick="app.extractPageData()">&#128260; Extrair Dados da Pagina</button>
+<div class="page-info">
+<h4>&#128202; Dados da Pagina</h4>
+<pre id="pageData">Clique em "Extrair Dados" para analisar...</pre>
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var app = {
+config: {
+  apiKey: localStorage.getItem('nvidia_api_key') || '',
+  model: localStorage.getItem('nvidia_model') || 'meta/llama-3.3-70b-instruct',
+  baseUrl: 'https://integrate.api.nvidia.com/v1'
+},
+
+pageContext: {
+  title: '', url: '', text: '', links: [], images: [], buttons: []
+},
+
+el: {},
+
+init: function() {
+  this.el = {
+    frame: document.getElementById('browserFrame'),
+    urlInput: document.getElementById('urlInput'),
+    progressBar: document.getElementById('progressBar'),
+    progressFill: document.getElementById('progressFill'),
+    statusText: document.getElementById('statusText'),
+    pageInfo: document.getElementById('pageInfo'),
+    chatMessages: document.getElementById('chatMessages'),
+    chatInput: document.getElementById('chatInput'),
+    sendBtn: document.getElementById('sendBtn'),
+    apiKey: document.getElementById('apiKey'),
+    modelSelect: document.getElementById('modelSelect'),
+    pageData: document.getElementById('pageData'),
+    errorOverlay: document.getElementById('errorOverlay')
+  };
+
+  this.el.apiKey.value = this.config.apiKey;
+  this.el.modelSelect.value = this.config.model;
+
+  this.el.urlInput.addEventListener('keydown', function(e) {
+    if(e.key === 'Enter') app.navigate();
+  });
+
+  this.el.chatInput.addEventListener('keydown', function(e) {
+    if(e.key === 'Enter') app.sendMessage();
+  });
+
+  this.el.frame.addEventListener('load', function() { app.onFrameLoad(); });
+
+  this.navigateTo('https://example.com');
+},
+
+navigate: function() {
+  var text = this.el.urlInput.value.trim();
+  if(!text) return;
+
+  if(text.charAt(0) === '/' || /clique|resuma|va para|pesquise|analise|liste|navegue/i.test(text)) {
+    this.el.chatInput.value = text.replace(/^\//, '');
+    this.sendMessage();
+    return;
+  }
+
+  this.navigateTo(text);
+},
+
+navigateTo: function(url) {
+  if(!/^https?:\/\//.test(url)) {
+    if(url.indexOf('.') > -1 && url.indexOf(' ') === -1) {
+      url = 'https://' + url;
+    } else {
+      url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+    }
+  }
+
+  this.el.progressBar.classList.add('active');
+  this.el.progressFill.style.width = '30%';
+  this.el.statusText.textContent = 'Carregando...';
+  this.el.errorOverlay.style.display = 'none';
+
+  this.el.frame.src = url;
+  this.el.urlInput.value = url;
+},
+
+goBack: function() {
+  try { this.el.frame.contentWindow.history.back(); } catch(e) {}
+},
+
+goForward: function() {
+  try { this.el.frame.contentWindow.history.forward(); } catch(e) {}
+},
+
+reload: function() {
+  this.el.frame.src = this.el.frame.src;
+},
+
+onFrameLoad: function() {
+  this.el.progressFill.style.width = '100%';
+  setTimeout(function() {
+    app.el.progressBar.classList.remove('active');
+    app.el.progressFill.style.width = '0%';
+  }, 500);
+
+  try {
+    var doc = this.el.frame.contentDocument;
+    if(doc) {
+      this.pageContext.title = doc.title || 'Sem titulo';
+      this.pageContext.url = this.el.frame.contentWindow.location.href || this.el.frame.src;
+      this.el.statusText.textContent = 'Pagina carregada';
+      this.el.errorOverlay.style.display = 'none';
+    } else {
+      this.pageContext.title = 'Acesso limitado (CORS)';
+      this.pageContext.url = this.el.frame.src;
+      this.el.statusText.textContent = 'Acesso limitado por CORS';
+    }
+  } catch(e) {
+    this.pageContext.title = 'Acesso limitado (CORS)';
+    this.pageContext.url = this.el.frame.src;
+    this.el.statusText.textContent = 'Acesso limitado por CORS';
+  }
+
+  this.el.pageInfo.textContent = this.pageContext.title + ' | ' + this.pageContext.url;
+  this.extractPageData();
+},
+
+saveConfig: function() {
+  this.config.apiKey = this.el.apiKey.value.trim();
+  this.config.model = this.el.modelSelect.value;
+  localStorage.setItem('nvidia_api_key', this.config.apiKey);
+  localStorage.setItem('nvidia_model', this.config.model);
+  this.addMessage('ai', 'Configuracao salva! API Key e modelo armazenados localmente.');
+},
+
+extractPageData: function() {
+  var url = this.el.frame.src;
+  this.el.statusText.textContent = 'Extraindo dados...';
+
+  try {
+    var doc = this.el.frame.contentDocument;
+    if(doc && doc.body) {
+      var text = (doc.body.innerText || '').substring(0, 3000);
+      var links = [];
+      var aTags = doc.querySelectorAll('a');
+      for(var i = 0; i < Math.min(aTags.length, 50); i++) {
+        links.push({
+          text: (aTags[i].innerText || aTags[i].textContent || '').substring(0, 100),
+          href: aTags[i].href || ''
+        });
+      }
+      var images = [];
+      var imgTags = doc.querySelectorAll('img');
+      for(var i = 0; i < Math.min(imgTags.length, 30); i++) {
+        images.push({
+          src: imgTags[i].src || '',
+          alt: imgTags[i].alt || ''
+        });
+      }
+      var buttons = [];
+      var btnTags = doc.querySelectorAll('button, input[type="submit"]');
+      for(var i = 0; i < Math.min(btnTags.length, 20); i++) {
+        buttons.push({
+          text: (btnTags[i].innerText || btnTags[i].value || '').substring(0, 100)
+        });
+      }
+
+      this.pageContext = { title: doc.title || 'Sem titulo', url: url, text: text, links: links, images: images, buttons: buttons };
+      this.updatePageInfo();
+      this.el.statusText.textContent = 'Dados extraidos';
+    } else {
+      this.fetchViaProxy(url);
+    }
+  } catch(e) {
+    this.el.statusText.textContent = 'Extracao limitada (CORS)';
+    this.pageContext = { title: 'Acesso limitado', url: url, text: '', links: [], images: [], buttons: [] };
+    this.updatePageInfo();
+  }
+},
+
+fetchViaProxy: function(url) {
+  var self = this;
+  var proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+
+  fetch(proxy)
+    .then(function(res) { return res.text(); })
+    .then(function(html) {
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(html, 'text/html');
+
+      var text = (doc.body ? doc.body.innerText : '').substring(0, 3000);
+      var links = [];
+      var aTags = doc.querySelectorAll('a');
+      for(var i = 0; i < Math.min(aTags.length, 50); i++) {
+        links.push({
+          text: (aTags[i].innerText || aTags[i].textContent || '').substring(0, 100),
+          href: aTags[i].href || ''
+        });
+      }
+      var images = [];
+      var imgTags = doc.querySelectorAll('img');
+      for(var i = 0; i < Math.min(imgTags.length, 30); i++) {
+        images.push({ src: imgTags[i].src || '', alt: imgTags[i].alt || '' });
+      }
+      var buttons = [];
+      var btnTags = doc.querySelectorAll('button, input[type="submit"]');
+      for(var i = 0; i < Math.min(btnTags.length, 20); i++) {
+        buttons.push({ text: (btnTags[i].innerText || btnTags[i].value || '').substring(0, 100) });
+      }
+
+      self.pageContext = { title: doc.title || 'Sem titulo', url: url, text: text, links: links, images: images, buttons: buttons };
+      self.updatePageInfo();
+      self.el.statusText.textContent = 'Dados extraidos via proxy';
+    })
+    .catch(function(e) {
+      self.el.statusText.textContent = 'Extracao limitada (CORS)';
+      self.pageContext = { title: 'Acesso limitado', url: url, text: '', links: [], images: [], buttons: [] };
+      self.updatePageInfo();
+    });
+},
+
+updatePageInfo: function() {
+  var info = 'Titulo: ' + this.pageContext.title + 
+    '\nURL: ' + this.pageContext.url + 
+    '\nTexto: ' + this.pageContext.text.length + ' caracteres' + 
+    '\nLinks: ' + this.pageContext.links.length + 
+    '\nImagens: ' + this.pageContext.images.length + 
+    '\nBotoes: ' + this.pageContext.buttons.length;
+  this.el.pageData.textContent = info;
+},
+
+addMessage: function(role, text) {
+  var div = document.createElement('div');
+  div.className = 'message ' + role;
+
+  var label = role === 'user' ? '&#128100; Voce' : '&#129302; NVIDIA NIM';
+  var formatted = text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+
+  div.innerHTML = '<div class="label">' + label + '</div>' + formatted;
+  this.el.chatMessages.appendChild(div);
+  this.el.chatMessages.scrollTop = this.el.chatMessages.scrollHeight;
+},
+
+quickCommand: function(text) {
+  this.el.chatInput.value = text;
+  this.sendMessage();
+},
+
+sendMessage: function() {
+  var text = this.el.chatInput.value.trim();
+  if(!text) return;
+
+  if(!this.config.apiKey || this.config.apiKey.indexOf('nvapi-') !== 0) {
+    this.addMessage('ai', 'Configure sua API Key da NVIDIA primeiro! Acesse https://build.nvidia.com para gerar uma chave gratuita (comeca com nvapi-).');
+    return;
+  }
+
+  this.el.chatInput.value = '';
+  this.addMessage('user', text);
+
+  var typing = document.createElement('div');
+  typing.className = 'typing';
+  typing.id = 'typing-indicator';
+  typing.textContent = 'NVIDIA NIM esta pensando...';
+  this.el.chatMessages.appendChild(typing);
+  this.el.chatMessages.scrollTop = this.el.chatMessages.scrollHeight;
+
+  this.el.sendBtn.disabled = true;
+  this.el.sendBtn.textContent = 'Processando...';
+  this.el.statusText.textContent = 'Enviando para NVIDIA NIM...';
+
+  var self = this;
+  var context = this.prepareContext();
+
+  this.callNVIDIA(text, context)
+    .then(function(response) {
+      var t = document.getElementById('typing-indicator');
+      if(t) t.remove();
+      self.addMessage('ai', response);
+      self.processActions(response);
+      self.el.statusText.textContent = 'Resposta recebida';
+    })
+    .catch(function(e) {
+      var t = document.getElementById('typing-indicator');
+      if(t) t.remove();
+      self.addMessage('ai', 'Erro: ' + e.message);
+      self.el.statusText.textContent = 'Erro na API';
+    })
+    .finally(function() {
+      self.el.sendBtn.disabled = false;
+      self.el.sendBtn.textContent = '\u25b6 Enviar para NVIDIA NIM';
+    });
+},
+
+prepareContext: function() {
+  var ctx = 'Titulo: ' + this.pageContext.title + '\nURL: ' + this.pageContext.url + '\n\n';
+  ctx += 'Texto (primeiros 2000 chars):\n' + this.pageContext.text.substring(0, 2000) + '\n\n';
+
+  if(this.pageContext.links.length) {
+    ctx += 'Links principais (' + this.pageContext.links.length + ' total):\n';
+    for(var i = 0; i < Math.min(this.pageContext.links.length, 15); i++) {
+      var l = this.pageContext.links[i];
+      ctx += (i+1) + '. ' + l.text.substring(0, 80) + ': ' + l.href.substring(0, 100) + '\n';
+    }
+    ctx += '\n';
+  }
+
+  if(this.pageContext.buttons.length) {
+    var btnTexts = [];
+    for(var i = 0; i < this.pageContext.buttons.length; i++) {
+      btnTexts.push(this.pageContext.buttons[i].text);
+    }
+    ctx += 'Botoes: ' + btnTexts.join(', ') + '\n\n';
+  }
+
+  return ctx;
+},
+
+callNVIDIA: function(userMessage, context) {
+  var systemPrompt = 'Voce e um assistente de navegacao web inteligente integrado a um navegador.\n' +
+    'Voce recebe comandos do usuario em portugues e ajuda a navegar, analisar e interagir com paginas web.\n\n' +
+    'Regras de resposta:\n' +
+    '1. Se o usuario pedir para ir a um site, responda com "NAVEGAR: [URL]" no inicio\n' +
+    '2. Se pedir para voltar, responda com "VOLTAR"\n' +
+    '3. Se pedir para avancar, responda com "AVANCAR"\n' +
+    '4. Para analise/resumo, forneca resposta detalhada baseada no contexto\n' +
+    '5. Seja conciso mas completo\n' +
+    '6. Responda em portugues\n\n' +
+    'Contexto atual da pagina:\n' + context;
+
+  var self = this;
+  return fetch(this.config.baseUrl + '/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + this.config.apiKey
+    },
+    body: JSON.stringify({
+      model: this.config.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.3,
+      max_tokens: 2048
+    })
+  }).then(function(res) {
+    if(!res.ok) {
+      return res.json().then(function(err) {
+        throw new Error((err.error && err.error.message) ? err.error.message : 'HTTP ' + res.status);
+      }).catch(function() {
+        throw new Error('HTTP ' + res.status);
+      });
+    }
+    return res.json();
+  }).then(function(data) {
+    return data.choices[0].message.content;
+  });
+},
+
+processActions: function(response) {
+  var navMatch = response.match(/NAVEGAR:\\s*(.+)/i);
+  if(navMatch) {
+    var url = navMatch[1].trim();
+    if(!/^https?:\/\//.test(url)) url = 'https://' + url;
+    this.navigateTo(url);
+    this.addMessage('ai', 'Executando: Navegando para ' + url);
+  }
+
+  if(/\\bVOLTAR\\b/i.test(response)) {
+    this.goBack();
+    this.addMessage('ai', 'Executando: Voltando...');
+  }
+
+  if(/\\bAVANCAR\\b/i.test(response)) {
+    this.goForward();
+    this.addMessage('ai', 'Executando: Avancando...');
+  }
+}
+};
+
+// Inicializa
+document.addEventListener('DOMContentLoaded', function() {
+  app.init();
+});
+
+// Expoe globalmente para os onclick inline
+window.app = app;
+})();
+</script>
 </body>
 </html>
