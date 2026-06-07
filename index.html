@@ -66,12 +66,12 @@ iframe{width:100%;height:100%;border:none}
 <div class="container">
 <div class="browser-panel">
 <div class="toolbar">
-<button onclick="app.goBack()" title="Voltar">&#9664;</button>
-<button onclick="app.goForward()" title="Avancar">&#9654;</button>
-<button onclick="app.reload()" title="Recarregar">&#8635;</button>
+<button id="btnBack" title="Voltar">&#9664;</button>
+<button id="btnForward" title="Avancar">&#9654;</button>
+<button id="btnReload" title="Recarregar">&#8635;</button>
 <div class="url-bar">
 <input type="text" id="urlInput" placeholder="Digite uma URL..." value="https://example.com">
-<button class="go" onclick="app.navigate()">Ir</button>
+<button class="go" id="btnGo">Ir</button>
 </div>
 </div>
 <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
@@ -105,13 +105,13 @@ iframe{width:100%;height:100%;border:none}
 <option value="nvidia/nemotron-4-340b-instruct">Nemotron 4 340B</option>
 <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B</option>
 </select>
-<button class="save" onclick="app.saveConfig()">&#128190; Salvar Configuracao</button>
+<button class="save" id="btnSave">&#128190; Salvar Configuracao</button>
 </div>
 <div class="quick-actions">
-<button onclick="app.quickCommand('Resuma o conteudo desta pagina de forma clara e objetiva')">&#128196; Resumir</button>
-<button onclick="app.quickCommand('Liste e categorize todos os links principais desta pagina')">&#128279; Links</button>
-<button onclick="app.quickCommand('Faca uma analise completa do conteudo, estrutura e proposito desta pagina')">&#128202; Analise</button>
-<button onclick="app.quickCommand('Quais acoes eu posso realizar nesta pagina? Liste botoes, formularios e campos interativos')">&#127918; Acoes</button>
+<button data-cmd="Resuma o conteudo desta pagina de forma clara e objetiva">&#128196; Resumir</button>
+<button data-cmd="Liste e categorize todos os links principais desta pagina">&#128279; Links</button>
+<button data-cmd="Faca uma analise completa do conteudo, estrutura e proposito desta pagina">&#128202; Analise</button>
+<button data-cmd="Quais acoes eu posso realizar nesta pagina? Liste botoes, formularios e campos interativos">&#127918; Acoes</button>
 </div>
 <div class="chat-container">
 <div class="chat-messages" id="chatMessages">
@@ -130,358 +130,410 @@ Bem-vindo! Configure sua API Key da NVIDIA no painel acima e comece a navegar co
 </div>
 <div class="chat-input-area">
 <input type="text" id="chatInput" placeholder="Ex: Va para example.com, Resuma esta pagina...">
-<button id="sendBtn" onclick="app.sendMessage()">&#9654; Enviar para NVIDIA NIM</button>
+<button id="sendBtn">&#9654; Enviar para NVIDIA NIM</button>
 </div>
 </div>
-<button class="btn-extract" onclick="app.extractPageData()">&#128260; Extrair Dados da Pagina</button>
+<button class="btn-extract" id="btnExtract">&#128260; Extrair Dados da Pagina</button>
 <div class="page-info">
 <h4>&#128202; Dados da Pagina</h4>
-<pre id="pageData">Clique em "Extrair Dados" para analisar...</pre>
+<pre id="pageData">Clique em Extrair Dados para analisar...</pre>
 </div>
 </div>
 </div>
 
 <script>
 (function(){
-'use strict';
+"use strict";
 
-var app = {
-config: {
-  apiKey: localStorage.getItem('nvidia_api_key') || '',
-  model: localStorage.getItem('nvidia_model') || 'meta/llama-3.3-70b-instruct',
-  baseUrl: 'https://integrate.api.nvidia.com/v1'
-},
+var CONFIG = {
+  apiKey: localStorage.getItem("nvidia_api_key") || "",
+  model: localStorage.getItem("nvidia_model") || "meta/llama-3.3-70b-instruct",
+  baseUrl: "https://integrate.api.nvidia.com/v1"
+};
 
-pageContext: {
-  title: '', url: '', text: '', links: [], images: [], buttons: []
-},
+var pageContext = {
+  title: "", url: "", text: "", links: [], images: [], buttons: []
+};
 
-el: {},
+var el = {};
 
-init: function() {
-  this.el = {
-    frame: document.getElementById('browserFrame'),
-    urlInput: document.getElementById('urlInput'),
-    progressBar: document.getElementById('progressBar'),
-    progressFill: document.getElementById('progressFill'),
-    statusText: document.getElementById('statusText'),
-    pageInfo: document.getElementById('pageInfo'),
-    chatMessages: document.getElementById('chatMessages'),
-    chatInput: document.getElementById('chatInput'),
-    sendBtn: document.getElementById('sendBtn'),
-    apiKey: document.getElementById('apiKey'),
-    modelSelect: document.getElementById('modelSelect'),
-    pageData: document.getElementById('pageData'),
-    errorOverlay: document.getElementById('errorOverlay')
-  };
+function startsWithHttp(url) {
+  return url.indexOf("http://") === 0 || url.indexOf("https://") === 0;
+}
 
-  this.el.apiKey.value = this.config.apiKey;
-  this.el.modelSelect.value = this.config.model;
+function init() {
+  el.frame = document.getElementById("browserFrame");
+  el.urlInput = document.getElementById("urlInput");
+  el.progressBar = document.getElementById("progressBar");
+  el.progressFill = document.getElementById("progressFill");
+  el.statusText = document.getElementById("statusText");
+  el.pageInfo = document.getElementById("pageInfo");
+  el.chatMessages = document.getElementById("chatMessages");
+  el.chatInput = document.getElementById("chatInput");
+  el.sendBtn = document.getElementById("sendBtn");
+  el.apiKey = document.getElementById("apiKey");
+  el.modelSelect = document.getElementById("modelSelect");
+  el.pageData = document.getElementById("pageData");
+  el.errorOverlay = document.getElementById("errorOverlay");
 
-  this.el.urlInput.addEventListener('keydown', function(e) {
-    if(e.key === 'Enter') app.navigate();
+  el.apiKey.value = CONFIG.apiKey;
+  el.modelSelect.value = CONFIG.model;
+
+  document.getElementById("btnGo").addEventListener("click", navigate);
+  document.getElementById("btnBack").addEventListener("click", goBack);
+  document.getElementById("btnForward").addEventListener("click", goForward);
+  document.getElementById("btnReload").addEventListener("click", reload);
+  document.getElementById("btnSave").addEventListener("click", saveConfig);
+  document.getElementById("btnExtract").addEventListener("click", extractPageData);
+  document.getElementById("sendBtn").addEventListener("click", sendMessage);
+
+  el.urlInput.addEventListener("keydown", function(e) {
+    if(e.key === "Enter") navigate();
+  });
+  el.chatInput.addEventListener("keydown", function(e) {
+    if(e.key === "Enter") sendMessage();
   });
 
-  this.el.chatInput.addEventListener('keydown', function(e) {
-    if(e.key === 'Enter') app.sendMessage();
-  });
+  var quickBtns = document.querySelectorAll(".quick-actions button");
+  for(var i = 0; i < quickBtns.length; i++) {
+    quickBtns[i].addEventListener("click", function() {
+      el.chatInput.value = this.getAttribute("data-cmd");
+      sendMessage();
+    });
+  }
 
-  this.el.frame.addEventListener('load', function() { app.onFrameLoad(); });
+  el.frame.addEventListener("load", onFrameLoad);
 
-  this.navigateTo('https://example.com');
-},
+  navigateTo("https://example.com");
+}
 
-navigate: function() {
-  var text = this.el.urlInput.value.trim();
+function navigate() {
+  var text = el.urlInput.value.trim();
   if(!text) return;
 
-  if(text.charAt(0) === '/' || /clique|resuma|va para|pesquise|analise|liste|navegue/i.test(text)) {
-    this.el.chatInput.value = text.replace(/^\//, '');
-    this.sendMessage();
+  if(text.charAt(0) === "/") {
+    el.chatInput.value = text.substring(1);
+    sendMessage();
     return;
   }
 
-  this.navigateTo(text);
-},
+  var lower = text.toLowerCase();
+  if(lower.indexOf("clique") >= 0 || lower.indexOf("resuma") >= 0 || 
+     lower.indexOf("va para") >= 0 || lower.indexOf("pesquise") >= 0 ||
+     lower.indexOf("analise") >= 0 || lower.indexOf("liste") >= 0 ||
+     lower.indexOf("navegue") >= 0) {
+    el.chatInput.value = text;
+    sendMessage();
+    return;
+  }
 
-navigateTo: function(url) {
-  if(!/^https?:\/\//.test(url)) {
-    if(url.indexOf('.') > -1 && url.indexOf(' ') === -1) {
-      url = 'https://' + url;
+  navigateTo(text);
+}
+
+function navigateTo(url) {
+  if(!startsWithHttp(url)) {
+    if(url.indexOf(".") > -1 && url.indexOf(" ") === -1) {
+      url = "https://" + url;
     } else {
-      url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+      url = "https://www.google.com/search?q=" + encodeURIComponent(url);
     }
   }
 
-  this.el.progressBar.classList.add('active');
-  this.el.progressFill.style.width = '30%';
-  this.el.statusText.textContent = 'Carregando...';
-  this.el.errorOverlay.style.display = 'none';
+  el.progressBar.classList.add("active");
+  el.progressFill.style.width = "30%";
+  el.statusText.textContent = "Carregando...";
+  el.errorOverlay.style.display = "none";
 
-  this.el.frame.src = url;
-  this.el.urlInput.value = url;
-},
+  el.frame.src = url;
+  el.urlInput.value = url;
+}
 
-goBack: function() {
-  try { this.el.frame.contentWindow.history.back(); } catch(e) {}
-},
+function goBack() {
+  try { el.frame.contentWindow.history.back(); } catch(e) {}
+}
 
-goForward: function() {
-  try { this.el.frame.contentWindow.history.forward(); } catch(e) {}
-},
+function goForward() {
+  try { el.frame.contentWindow.history.forward(); } catch(e) {}
+}
 
-reload: function() {
-  this.el.frame.src = this.el.frame.src;
-},
+function reload() {
+  el.frame.src = el.frame.src;
+}
 
-onFrameLoad: function() {
-  this.el.progressFill.style.width = '100%';
+function onFrameLoad() {
+  el.progressFill.style.width = "100%";
   setTimeout(function() {
-    app.el.progressBar.classList.remove('active');
-    app.el.progressFill.style.width = '0%';
+    el.progressBar.classList.remove("active");
+    el.progressFill.style.width = "0%";
   }, 500);
 
   try {
-    var doc = this.el.frame.contentDocument;
+    var doc = el.frame.contentDocument;
     if(doc) {
-      this.pageContext.title = doc.title || 'Sem titulo';
-      this.pageContext.url = this.el.frame.contentWindow.location.href || this.el.frame.src;
-      this.el.statusText.textContent = 'Pagina carregada';
-      this.el.errorOverlay.style.display = 'none';
+      pageContext.title = doc.title || "Sem titulo";
+      pageContext.url = el.frame.contentWindow.location.href || el.frame.src;
+      el.statusText.textContent = "Pagina carregada";
+      el.errorOverlay.style.display = "none";
     } else {
-      this.pageContext.title = 'Acesso limitado (CORS)';
-      this.pageContext.url = this.el.frame.src;
-      this.el.statusText.textContent = 'Acesso limitado por CORS';
+      pageContext.title = "Acesso limitado (CORS)";
+      pageContext.url = el.frame.src;
+      el.statusText.textContent = "Acesso limitado por CORS";
     }
   } catch(e) {
-    this.pageContext.title = 'Acesso limitado (CORS)';
-    this.pageContext.url = this.el.frame.src;
-    this.el.statusText.textContent = 'Acesso limitado por CORS';
+    pageContext.title = "Acesso limitado (CORS)";
+    pageContext.url = el.frame.src;
+    el.statusText.textContent = "Acesso limitado por CORS";
   }
 
-  this.el.pageInfo.textContent = this.pageContext.title + ' | ' + this.pageContext.url;
-  this.extractPageData();
-},
+  el.pageInfo.textContent = pageContext.title + " | " + pageContext.url;
+  extractPageData();
+}
 
-saveConfig: function() {
-  this.config.apiKey = this.el.apiKey.value.trim();
-  this.config.model = this.el.modelSelect.value;
-  localStorage.setItem('nvidia_api_key', this.config.apiKey);
-  localStorage.setItem('nvidia_model', this.config.model);
-  this.addMessage('ai', 'Configuracao salva! API Key e modelo armazenados localmente.');
-},
+function saveConfig() {
+  CONFIG.apiKey = el.apiKey.value.trim();
+  CONFIG.model = el.modelSelect.value;
+  localStorage.setItem("nvidia_api_key", CONFIG.apiKey);
+  localStorage.setItem("nvidia_model", CONFIG.model);
+  addMessage("ai", "Configuracao salva! API Key e modelo armazenados localmente.");
+}
 
-extractPageData: function() {
-  var url = this.el.frame.src;
-  this.el.statusText.textContent = 'Extraindo dados...';
+function extractPageData() {
+  var url = el.frame.src;
+  el.statusText.textContent = "Extraindo dados...";
 
   try {
-    var doc = this.el.frame.contentDocument;
+    var doc = el.frame.contentDocument;
     if(doc && doc.body) {
-      var text = (doc.body.innerText || '').substring(0, 3000);
+      var text = (doc.body.innerText || "").substring(0, 3000);
       var links = [];
-      var aTags = doc.querySelectorAll('a');
+      var aTags = doc.querySelectorAll("a");
       for(var i = 0; i < Math.min(aTags.length, 50); i++) {
         links.push({
-          text: (aTags[i].innerText || aTags[i].textContent || '').substring(0, 100),
-          href: aTags[i].href || ''
+          text: (aTags[i].innerText || aTags[i].textContent || "").substring(0, 100),
+          href: aTags[i].href || ""
         });
       }
       var images = [];
-      var imgTags = doc.querySelectorAll('img');
+      var imgTags = doc.querySelectorAll("img");
       for(var i = 0; i < Math.min(imgTags.length, 30); i++) {
         images.push({
-          src: imgTags[i].src || '',
-          alt: imgTags[i].alt || ''
+          src: imgTags[i].src || "",
+          alt: imgTags[i].alt || ""
         });
       }
       var buttons = [];
       var btnTags = doc.querySelectorAll('button, input[type="submit"]');
       for(var i = 0; i < Math.min(btnTags.length, 20); i++) {
         buttons.push({
-          text: (btnTags[i].innerText || btnTags[i].value || '').substring(0, 100)
+          text: (btnTags[i].innerText || btnTags[i].value || "").substring(0, 100)
         });
       }
 
-      this.pageContext = { title: doc.title || 'Sem titulo', url: url, text: text, links: links, images: images, buttons: buttons };
-      this.updatePageInfo();
-      this.el.statusText.textContent = 'Dados extraidos';
+      pageContext = { title: doc.title || "Sem titulo", url: url, text: text, links: links, images: images, buttons: buttons };
+      updatePageInfo();
+      el.statusText.textContent = "Dados extraidos";
     } else {
-      this.fetchViaProxy(url);
+      fetchViaProxy(url);
     }
   } catch(e) {
-    this.el.statusText.textContent = 'Extracao limitada (CORS)';
-    this.pageContext = { title: 'Acesso limitado', url: url, text: '', links: [], images: [], buttons: [] };
-    this.updatePageInfo();
+    el.statusText.textContent = "Extracao limitada (CORS)";
+    pageContext = { title: "Acesso limitado", url: url, text: "", links: [], images: [], buttons: [] };
+    updatePageInfo();
   }
-},
+}
 
-fetchViaProxy: function(url) {
-  var self = this;
-  var proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+function fetchViaProxy(url) {
+  var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
 
   fetch(proxy)
     .then(function(res) { return res.text(); })
     .then(function(html) {
       var parser = new DOMParser();
-      var doc = parser.parseFromString(html, 'text/html');
+      var doc = parser.parseFromString(html, "text/html");
 
-      var text = (doc.body ? doc.body.innerText : '').substring(0, 3000);
+      var text = (doc.body ? doc.body.innerText : "").substring(0, 3000);
       var links = [];
-      var aTags = doc.querySelectorAll('a');
+      var aTags = doc.querySelectorAll("a");
       for(var i = 0; i < Math.min(aTags.length, 50); i++) {
         links.push({
-          text: (aTags[i].innerText || aTags[i].textContent || '').substring(0, 100),
-          href: aTags[i].href || ''
+          text: (aTags[i].innerText || aTags[i].textContent || "").substring(0, 100),
+          href: aTags[i].href || ""
         });
       }
       var images = [];
-      var imgTags = doc.querySelectorAll('img');
+      var imgTags = doc.querySelectorAll("img");
       for(var i = 0; i < Math.min(imgTags.length, 30); i++) {
-        images.push({ src: imgTags[i].src || '', alt: imgTags[i].alt || '' });
+        images.push({ src: imgTags[i].src || "", alt: imgTags[i].alt || "" });
       }
       var buttons = [];
       var btnTags = doc.querySelectorAll('button, input[type="submit"]');
       for(var i = 0; i < Math.min(btnTags.length, 20); i++) {
-        buttons.push({ text: (btnTags[i].innerText || btnTags[i].value || '').substring(0, 100) });
+        buttons.push({ text: (btnTags[i].innerText || btnTags[i].value || "").substring(0, 100) });
       }
 
-      self.pageContext = { title: doc.title || 'Sem titulo', url: url, text: text, links: links, images: images, buttons: buttons };
-      self.updatePageInfo();
-      self.el.statusText.textContent = 'Dados extraidos via proxy';
+      pageContext = { title: doc.title || "Sem titulo", url: url, text: text, links: links, images: images, buttons: buttons };
+      updatePageInfo();
+      el.statusText.textContent = "Dados extraidos via proxy";
     })
     .catch(function(e) {
-      self.el.statusText.textContent = 'Extracao limitada (CORS)';
-      self.pageContext = { title: 'Acesso limitado', url: url, text: '', links: [], images: [], buttons: [] };
-      self.updatePageInfo();
+      el.statusText.textContent = "Extracao limitada (CORS)";
+      pageContext = { title: "Acesso limitado", url: url, text: "", links: [], images: [], buttons: [] };
+      updatePageInfo();
     });
-},
+}
 
-updatePageInfo: function() {
-  var info = 'Titulo: ' + this.pageContext.title + 
-    '\nURL: ' + this.pageContext.url + 
-    '\nTexto: ' + this.pageContext.text.length + ' caracteres' + 
-    '\nLinks: ' + this.pageContext.links.length + 
-    '\nImagens: ' + this.pageContext.images.length + 
-    '\nBotoes: ' + this.pageContext.buttons.length;
-  this.el.pageData.textContent = info;
-},
+function updatePageInfo() {
+  var info = "Titulo: " + pageContext.title + 
+    "
+URL: " + pageContext.url + 
+    "
+Texto: " + pageContext.text.length + " caracteres" + 
+    "
+Links: " + pageContext.links.length + 
+    "
+Imagens: " + pageContext.images.length + 
+    "
+Botoes: " + pageContext.buttons.length;
+  el.pageData.textContent = info;
+}
 
-addMessage: function(role, text) {
-  var div = document.createElement('div');
-  div.className = 'message ' + role;
+function addMessage(role, text) {
+  var div = document.createElement("div");
+  div.className = "message " + role;
 
-  var label = role === 'user' ? '&#128100; Voce' : '&#129302; NVIDIA NIM';
-  var formatted = text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code>$1</code>')
-    .replace(/\n/g, '<br>');
+  var label = role === "user" ? "&#128100; Voce" : "&#129302; NVIDIA NIM";
 
-  div.innerHTML = '<div class="label">' + label + '</div>' + formatted;
-  this.el.chatMessages.appendChild(div);
-  this.el.chatMessages.scrollTop = this.el.chatMessages.scrollHeight;
-},
+  // Formata markdown simples sem regex literais
+  var formatted = text;
+  formatted = formatted.split("**").join("<strong>");
+  // Corrige: <strong>texto</strong> - precisamos fechar as tags
+  // Vamos fazer de forma mais simples
+  formatted = formatted.replace(new RegExp("\*\*(.+?)\*\*", "g"), "<strong>$1</strong>");
+  formatted = formatted.replace(new RegExp("\*(.+?)\*", "g"), "<em>$1</em>");
+  formatted = formatted.replace(new RegExp("`(.+?)`", "g"), "<code>$1</code>");
+  formatted = formatted.replace(new RegExp("
+", "g"), "<br>");
 
-quickCommand: function(text) {
-  this.el.chatInput.value = text;
-  this.sendMessage();
-},
+  div.innerHTML = '<div class="label">' + label + "</div>" + formatted;
+  el.chatMessages.appendChild(div);
+  el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
+}
 
-sendMessage: function() {
-  var text = this.el.chatInput.value.trim();
+function sendMessage() {
+  var text = el.chatInput.value.trim();
   if(!text) return;
 
-  if(!this.config.apiKey || this.config.apiKey.indexOf('nvapi-') !== 0) {
-    this.addMessage('ai', 'Configure sua API Key da NVIDIA primeiro! Acesse https://build.nvidia.com para gerar uma chave gratuita (comeca com nvapi-).');
+  if(!CONFIG.apiKey || CONFIG.apiKey.indexOf("nvapi-") !== 0) {
+    addMessage("ai", "Configure sua API Key da NVIDIA primeiro! Acesse https://build.nvidia.com para gerar uma chave gratuita (comeca com nvapi-).");
     return;
   }
 
-  this.el.chatInput.value = '';
-  this.addMessage('user', text);
+  el.chatInput.value = "";
+  addMessage("user", text);
 
-  var typing = document.createElement('div');
-  typing.className = 'typing';
-  typing.id = 'typing-indicator';
-  typing.textContent = 'NVIDIA NIM esta pensando...';
-  this.el.chatMessages.appendChild(typing);
-  this.el.chatMessages.scrollTop = this.el.chatMessages.scrollHeight;
+  var typing = document.createElement("div");
+  typing.className = "typing";
+  typing.id = "typing-indicator";
+  typing.textContent = "NVIDIA NIM esta pensando...";
+  el.chatMessages.appendChild(typing);
+  el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
 
-  this.el.sendBtn.disabled = true;
-  this.el.sendBtn.textContent = 'Processando...';
-  this.el.statusText.textContent = 'Enviando para NVIDIA NIM...';
+  el.sendBtn.disabled = true;
+  el.sendBtn.textContent = "Processando...";
+  el.statusText.textContent = "Enviando para NVIDIA NIM...";
 
-  var self = this;
-  var context = this.prepareContext();
+  var context = prepareContext();
 
-  this.callNVIDIA(text, context)
+  callNVIDIA(text, context)
     .then(function(response) {
-      var t = document.getElementById('typing-indicator');
+      var t = document.getElementById("typing-indicator");
       if(t) t.remove();
-      self.addMessage('ai', response);
-      self.processActions(response);
-      self.el.statusText.textContent = 'Resposta recebida';
+      addMessage("ai", response);
+      processActions(response);
+      el.statusText.textContent = "Resposta recebida";
     })
     .catch(function(e) {
-      var t = document.getElementById('typing-indicator');
+      var t = document.getElementById("typing-indicator");
       if(t) t.remove();
-      self.addMessage('ai', 'Erro: ' + e.message);
-      self.el.statusText.textContent = 'Erro na API';
+      addMessage("ai", "Erro: " + e.message);
+      el.statusText.textContent = "Erro na API";
     })
     .finally(function() {
-      self.el.sendBtn.disabled = false;
-      self.el.sendBtn.textContent = '\u25b6 Enviar para NVIDIA NIM';
+      el.sendBtn.disabled = false;
+      el.sendBtn.textContent = "▶ Enviar para NVIDIA NIM";
     });
-},
+}
 
-prepareContext: function() {
-  var ctx = 'Titulo: ' + this.pageContext.title + '\nURL: ' + this.pageContext.url + '\n\n';
-  ctx += 'Texto (primeiros 2000 chars):\n' + this.pageContext.text.substring(0, 2000) + '\n\n';
+function prepareContext() {
+  var ctx = "Titulo: " + pageContext.title + "
+URL: " + pageContext.url + "
 
-  if(this.pageContext.links.length) {
-    ctx += 'Links principais (' + this.pageContext.links.length + ' total):\n';
-    for(var i = 0; i < Math.min(this.pageContext.links.length, 15); i++) {
-      var l = this.pageContext.links[i];
-      ctx += (i+1) + '. ' + l.text.substring(0, 80) + ': ' + l.href.substring(0, 100) + '\n';
+";
+  ctx += "Texto (primeiros 2000 chars):
+" + pageContext.text.substring(0, 2000) + "
+
+";
+
+  if(pageContext.links.length) {
+    ctx += "Links principais (" + pageContext.links.length + " total):
+";
+    for(var i = 0; i < Math.min(pageContext.links.length, 15); i++) {
+      var l = pageContext.links[i];
+      ctx += (i+1) + ". " + l.text.substring(0, 80) + ": " + l.href.substring(0, 100) + "
+";
     }
-    ctx += '\n';
+    ctx += "
+";
   }
 
-  if(this.pageContext.buttons.length) {
+  if(pageContext.buttons.length) {
     var btnTexts = [];
-    for(var i = 0; i < this.pageContext.buttons.length; i++) {
-      btnTexts.push(this.pageContext.buttons[i].text);
+    for(var i = 0; i < pageContext.buttons.length; i++) {
+      btnTexts.push(pageContext.buttons[i].text);
     }
-    ctx += 'Botoes: ' + btnTexts.join(', ') + '\n\n';
+    ctx += "Botoes: " + btnTexts.join(", ") + "
+
+";
   }
 
   return ctx;
-},
+}
 
-callNVIDIA: function(userMessage, context) {
-  var systemPrompt = 'Voce e um assistente de navegacao web inteligente integrado a um navegador.\n' +
-    'Voce recebe comandos do usuario em portugues e ajuda a navegar, analisar e interagir com paginas web.\n\n' +
-    'Regras de resposta:\n' +
-    '1. Se o usuario pedir para ir a um site, responda com "NAVEGAR: [URL]" no inicio\n' +
-    '2. Se pedir para voltar, responda com "VOLTAR"\n' +
-    '3. Se pedir para avancar, responda com "AVANCAR"\n' +
-    '4. Para analise/resumo, forneca resposta detalhada baseada no contexto\n' +
-    '5. Seja conciso mas completo\n' +
-    '6. Responda em portugues\n\n' +
-    'Contexto atual da pagina:\n' + context;
+function callNVIDIA(userMessage, context) {
+  var systemPrompt = "Voce e um assistente de navegacao web inteligente integrado a um navegador.
+" +
+    "Voce recebe comandos do usuario em portugues e ajuda a navegar, analisar e interagir com paginas web.
 
-  var self = this;
-  return fetch(this.config.baseUrl + '/chat/completions', {
-    method: 'POST',
+" +
+    "Regras de resposta:
+" +
+    '1. Se o usuario pedir para ir a um site, responda com "NAVEGAR: [URL]" no inicio
+' +
+    '2. Se pedir para voltar, responda com "VOLTAR"
+' +
+    '3. Se pedir para avancar, responda com "AVANCAR"
+' +
+    "4. Para analise/resumo, forneca resposta detalhada baseada no contexto
+" +
+    "5. Seja conciso mas completo
+" +
+    "6. Responda em portugues
+
+" +
+    "Contexto atual da pagina:
+" + context;
+
+  return fetch(CONFIG.baseUrl + "/chat/completions", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + this.config.apiKey
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + CONFIG.apiKey
     },
     body: JSON.stringify({
-      model: this.config.model,
+      model: CONFIG.model,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage }
       ],
       temperature: 0.3,
       max_tokens: 2048
@@ -489,45 +541,43 @@ callNVIDIA: function(userMessage, context) {
   }).then(function(res) {
     if(!res.ok) {
       return res.json().then(function(err) {
-        throw new Error((err.error && err.error.message) ? err.error.message : 'HTTP ' + res.status);
+        var msg = (err.error && err.error.message) ? err.error.message : "HTTP " + res.status;
+        throw new Error(msg);
       }).catch(function() {
-        throw new Error('HTTP ' + res.status);
+        throw new Error("HTTP " + res.status);
       });
     }
     return res.json();
   }).then(function(data) {
     return data.choices[0].message.content;
   });
-},
+}
 
-processActions: function(response) {
-  var navMatch = response.match(/NAVEGAR:\\s*(.+)/i);
-  if(navMatch) {
-    var url = navMatch[1].trim();
-    if(!/^https?:\/\//.test(url)) url = 'https://' + url;
-    this.navigateTo(url);
-    this.addMessage('ai', 'Executando: Navegando para ' + url);
+function processActions(response) {
+  var navIdx = response.indexOf("NAVEGAR:");
+  if(navIdx >= 0) {
+    var after = response.substring(navIdx + 8).trim();
+    var endIdx = after.indexOf("
+");
+    if(endIdx < 0) endIdx = after.length;
+    var url = after.substring(0, endIdx).trim();
+    if(!startsWithHttp(url)) url = "https://" + url;
+    navigateTo(url);
+    addMessage("ai", "Executando: Navegando para " + url);
   }
 
-  if(/\\bVOLTAR\\b/i.test(response)) {
-    this.goBack();
-    this.addMessage('ai', 'Executando: Voltando...');
+  if(response.indexOf("VOLTAR") >= 0) {
+    goBack();
+    addMessage("ai", "Executando: Voltando...");
   }
 
-  if(/\\bAVANCAR\\b/i.test(response)) {
-    this.goForward();
-    this.addMessage('ai', 'Executando: Avancando...');
+  if(response.indexOf("AVANCAR") >= 0) {
+    goForward();
+    addMessage("ai", "Executando: Avancando...");
   }
 }
-};
 
-// Inicializa
-document.addEventListener('DOMContentLoaded', function() {
-  app.init();
-});
-
-// Expoe globalmente para os onclick inline
-window.app = app;
+document.addEventListener("DOMContentLoaded", init);
 })();
 </script>
 </body>
